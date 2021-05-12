@@ -24,7 +24,7 @@ main ()
 	printf("rmalloc(1000):%p\n", p3) ; 
 	rmprint() ;
 
-	p4 = rmalloc(1000) ; 
+	p4 = rmalloc(2000) ; 
 	printf("rmalloc(1000):%p\n", p4) ; 
 	rmprint() ;
 }

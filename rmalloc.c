@@ -16,19 +16,26 @@ void * rmalloc (size_t s)
 		// search through free list
 		while(free->next != 0x0){
 			// found the first chunk the fits user's request
-			if(s <= free->size){
-
-				// link current free to the node after the found target node
-				// free->next = free->next->next;
-
-				return 0x0;
+			if(s == free->next->size){
+				// bring target data to temporary
+				rm_header_ptr temp = free->next;
+				// connect free list to the next node after target node
+				free->next = free->next->next;
+				rm_header_ptr used = &rm_used_list;
+				// walks through used list to meet the end place
+				while(used->next != 0x0){
+					used = used->next;
+				}
+				// add target address at the end of used list
+				temp->next = 0x0;
+				used->next = temp;
+				return temp;
 			}
 			free = free->next;
 		}
 		rm_header_ptr used = &rm_used_list;
 		// walks through used list to meet the end place
 		while(used->next != 0x0){
-			// brings used to the last place of user list
 			used = used->next;
 		}
 		// add new allocated header to the end of used list
@@ -66,6 +73,7 @@ void rfree (void * p)
 		}
 		used = used->next;
 	}
+	// case where there has been no equall address in the used list
 	if(used->next == 0x0){
 		printf("Your process don't have such address allocated.\n");
 		printf("No free has happend.");
