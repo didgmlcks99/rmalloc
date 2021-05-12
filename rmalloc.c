@@ -1,15 +1,42 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include "rmalloc.h" 
-
 
 rm_header rm_free_list = { 0x0, 0 } ;
 rm_header rm_used_list = { 0x0, 0 } ;
 
+rm_option policy = FirstFit;
+
 void * rmalloc (size_t s) 
 {
-	// TODO 
-	return 0x0 ; // erase this
+	// first fit policy case
+	if(policy == FirstFit){
+		rm_header_ptr free = &rm_free_list;
+		// search through free list
+		while(free->next != 0x0){
+			// found the first chunk the fits user's request
+			if(s <= free->size){
+				
+				return 0x0;
+			}
+			free = free->next;
+		}
+		rm_header_ptr used = &rm_used_list;
+		// search through used list, when there is no chunk in the free list that fits user's request
+		while(used->next != 0x0){
+			// brings used to the last place of user list
+			used = used->next;
+		}
+		// add new allocated header to the end of used list
+		rm_header * new;
+		new = mmap(NULL, (s+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+		new->next = 0x0;
+		new->size = s;
+		used->next = new;
+		return new;
+	}
+	return 0x0;
 }
 
 void rfree (void * p) 
