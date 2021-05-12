@@ -6,4 +6,5 @@
 ## TODO list
 + rmalloc()
     + split allocating
++ rfree()
     + coalescing free list
