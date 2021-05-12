@@ -15,7 +15,7 @@ void * rmalloc (size_t s)
 		rm_header_ptr free = &rm_free_list;
 		// search through free list
 		while(free->next != 0x0){
-			// found the first chunk the fits user's request
+			// found the first chunk the exactly fits user's request
 			if(s == free->next->size){
 				// bring target data to temporary
 				rm_header_ptr temp = free->next;
@@ -30,6 +30,10 @@ void * rmalloc (size_t s)
 				temp->next = 0x0;
 				used->next = temp;
 				return temp;
+			}
+			// found the first chunk the fits user's request with remaining space
+			else if(s <= free->next->size){
+				return 0x0;
 			}
 			free = free->next;
 		}
