@@ -61,6 +61,9 @@ void rfree (void * p)
 		}
 		used = used->next;
 	}
+	// case when it is not found
+	printf("No such allocated address!\n");
+	printf("No free happened!\n");
 }
 
 void * rrealloc (void * p, size_t s) 
