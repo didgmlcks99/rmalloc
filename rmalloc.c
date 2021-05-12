@@ -23,7 +23,7 @@ void * rmalloc (size_t s)
 			free = free->next;
 		}
 		rm_header_ptr used = &rm_used_list;
-		// search through used list, when there is no chunk in the free list that fits user's request
+		// walks through used list to meet the end place
 		while(used->next != 0x0){
 			// brings used to the last place of user list
 			used = used->next;
@@ -41,7 +41,26 @@ void * rmalloc (size_t s)
 
 void rfree (void * p) 
 {
-	// TODO 
+	rm_header_ptr used = &rm_used_list;
+	// searches through used list
+	while(used->next != 0x0){
+		// when used list meets the target address
+		if(used->next == p){
+			// connect used list to the next node after target node
+			used->next = used->next->next;
+			rm_header_ptr free = &rm_free_list;
+			// walks through free list to meet the end place
+			while(free->next != 0x0){
+				// brings used to the last place of user list
+				free = free->next;
+			}
+			// add target address at the end of free list
+			free->next = p;
+			free->next->next = 0x0;
+			break;
+		}
+		used = used->next;
+	}
 }
 
 void * rrealloc (void * p, size_t s) 
