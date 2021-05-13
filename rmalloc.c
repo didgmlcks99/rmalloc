@@ -101,7 +101,6 @@ void rfree (void * p)
 				// connect current node to the node after target node
 				free->next = free->next->next;
 				// deallocate temp
-				printf("temp 2 : %p : %lu\n", temp2, temp2->size);
 				munmap(temp2, (temp2->size + sizeof(rm_header)));
 			}
 
