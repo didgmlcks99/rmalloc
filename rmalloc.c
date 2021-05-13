@@ -81,23 +81,33 @@ void rfree (void * p)
 			rm_header_ptr temp = used->next;
 			// connect used list to the next node after target node
 			used->next = used->next->next;
+			
+			size_t coal_size = temp->size;
+			// deallocate temp
+			munmap(temp, (temp->size + sizeof(rm_header)));
 			rm_header_ptr free = &rm_free_list;
 			// walks through free list to meet the end place
 			while(free->next != 0x0){
-				// brings used to the last place of user list
-				free = free->next;
+				// increment size for coalescing
+				coal_size += free->next->size;
+				// bring first node to temp
+				rm_header_ptr temp2 = free->next;
+				// connect current node to the node after target node
+				free->next = free->next->next;
+				// deallocate temp
+				printf("temp 2 : %p : %lu\n", temp2, temp2->size);
+				munmap(temp2, (temp2->size + sizeof(rm_header)));
 			}
-			// add target address at the end of free list
-			temp->next = 0x0;
-			free->next = temp;
+
+			rm_header_ptr coal = mmap(NULL, (coal_size + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+			// add coalesced address at the end of free list
+			coal->next = 0x0;
+			coal->size = coal_size;
+			free->next = coal;
+
 			break;
 		}
 		used = used->next;
-	}
-	// case where there has been no equall address in the used list
-	if(used->next == 0x0){
-		printf("Your process don't have such address allocated.\n");
-		printf("No free has happend.");
 	}
 }
 
