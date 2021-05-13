@@ -30,7 +30,7 @@ void * rmalloc (size_t s)
 				// add target address at the end of used list
 				temp->next = 0x0;
 				used->next = temp;
-				return temp;
+				return (void *)temp + sizeof(rm_header);
 			}
 			// when found the first chunk the fits user's request with remaining space
 			else if(s <= free->next->size){
@@ -52,6 +52,12 @@ void * rmalloc (size_t s)
 			free = free->next;
 		}
 		
+		// rm_header_ptr test = &rm_used_list;
+		// while(test->next != 0x0){
+		// 	printf("%p\n", (test->next) - 1);
+		// 	test = test->next;
+		// 	// rmprint();
+		// }
 		// when there are no feasible memory region for user's request
 		rm_header_ptr used = &rm_used_list;
 		// walks through used list to meet the end place
@@ -65,7 +71,7 @@ void * rmalloc (size_t s)
 		new->next = 0x0;
 		new->size = s;
 		used->next = new;
-		return new;
+		return (void *)new + sizeof(rm_header);
 	}
 	return 0x0;
 }
@@ -76,7 +82,7 @@ void rfree (void * p)
 	// searches through used list
 	while(used->next != 0x0){
 		// when used list meets the target address
-		if(used->next == p){
+		if(used->next == (void *)(p - sizeof(rm_header))){
 			// bring target data to temporary
 			rm_header_ptr temp = used->next;
 			// connect used list to the next node after target node
