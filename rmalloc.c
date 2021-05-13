@@ -46,19 +46,8 @@ void * rmalloc (size_t s)
 				// node pointed to initial address now points to remaining space
 				free->next = split;
 
-				rm_header_ptr used = &rm_used_list;
-				// walks through used list to meet the end place
-				while(used->next != 0x0){
-					used = used->next;
-				}
-				
-				// allocate user request size
-				rm_header_ptr new;
-				new = mmap(NULL, (s+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
-				new->next = 0x0;
-				new->size = s;
-				used->next = new;
-				return new;
+				// send code to allocation and connection to used list at user request amount
+				break;
 			}
 			free = free->next;
 		}
