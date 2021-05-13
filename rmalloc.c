@@ -39,7 +39,7 @@ void * rmalloc (size_t s)
 			else if(s <= tot_size){
 				rm_header_ptr free2 = &rm_free_list;
 				size_t coal_size = free2->size;
-				while(free2->next != 0x0){
+				while(coal_size != tot_size){
 					// increment size for coalescing
 					coal_size += free2->next->size;
 					// bring first node to temp
@@ -50,22 +50,11 @@ void * rmalloc (size_t s)
 					munmap(temp2, (temp2->size + sizeof(rm_header)));
 				}
 				
+				// allocate for second part of memory after split
 				rm_header_ptr split = mmap(NULL, ((coal_size-s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 				split->next = free2->next;
 				split->size = coal_size - s;
 				free2->next = split;
-
-				// //allocate remaining space after split
-				// rm_header_ptr split;
-				// split = mmap(NULL, ((free->next->size - s)+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
-				// // split points to the intial address
-				// split->next = free->next->next;
-				// // split size is decreased by user's reqest
-				// split->size = (free->next->size - s);
-				// // remove initial address
-				// munmap(free->next, (free->next->size + sizeof(rm_header)));
-				// // node pointed to initial address now points to remaining space
-				// free->next = split;
 
 				// send code to allocation and connection to used list at user request amount
 				break;
@@ -101,34 +90,13 @@ void rfree (void * p)
 			rm_header_ptr temp = used->next;
 			// connect used list to the next node after target node
 			used->next = used->next->next;
-/*
-			size_t coal_size = temp->size;
-			// deallocate temp
-			munmap(temp, (temp->size + sizeof(rm_header)));
-*/
 
 			rm_header_ptr free = &rm_free_list;
 			// walks through free list to meet the end place
 			while(free->next != 0x0){
-				/*
-				// increment size for coalescing
-				coal_size += free->next->size;
-				// bring first node to temp
-				rm_header_ptr temp2 = free->next;
-				// connect current node to the node after target node
-				free->next = free->next->next;
-				// deallocate temp
-				munmap(temp2, (temp2->size + sizeof(rm_header)));
-				*/
 				free = free->next;
 			}
-/*
-			rm_header_ptr coal = mmap(NULL, (coal_size + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
-			// add coalesced address at the end of free list
-			coal->next = 0x0;
-			coal->size = coal_size;
-			free->next = coal;
-*/
+
 			temp->next = 0x0;
 			free->next = temp;
 			break;

@@ -4,9 +4,4 @@
 <br/><br/>
 
 ## TODO list
-+ rmalloc()
-    + split allocating
-    + without deallocating
-+ rfree()
-    + coalescing free list
-    + without deallocating intial data
++ other functions
