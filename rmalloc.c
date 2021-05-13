@@ -15,12 +15,13 @@ void * rmalloc (size_t s)
 		rm_header_ptr free = &rm_free_list;
 		// search through free list
 		while(free->next != 0x0){
-			// found the first chunk the exactly fits user's request
+			// when found the first chunk that exactly fits user's request
 			if(s == free->next->size){
 				// bring target data to temporary
 				rm_header_ptr temp = free->next;
 				// connect free list to the next node after target node
 				free->next = free->next->next;
+				
 				rm_header_ptr used = &rm_used_list;
 				// walks through used list to meet the end place
 				while(used->next != 0x0){
@@ -31,19 +32,46 @@ void * rmalloc (size_t s)
 				used->next = temp;
 				return temp;
 			}
-			// found the first chunk the fits user's request with remaining space
+			// when found the first chunk the fits user's request with remaining space
 			else if(s <= free->next->size){
-				return 0x0;
+				//allocate remaining space after split
+				rm_header_ptr split;
+				split = mmap(NULL, ((free->next->size - s)+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+				// split points to the intial address
+				split->next = free->next->next;
+				// split size is decreased by user's reqest
+				split->size = (free->next->size - s);
+				// remove initial address
+				munmap(free->next, (free->next->size + sizeof(rm_header)));
+				// node pointed to initial address now points to remaining space
+				free->next = split;
+
+				rm_header_ptr used = &rm_used_list;
+				// walks through used list to meet the end place
+				while(used->next != 0x0){
+					used = used->next;
+				}
+				
+				// allocate user request size
+				rm_header_ptr new;
+				new = mmap(NULL, (s+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+				new->next = 0x0;
+				new->size = s;
+				used->next = new;
+				return new;
 			}
 			free = free->next;
 		}
+		
+		// when there are no feasible memory region for user's request
 		rm_header_ptr used = &rm_used_list;
 		// walks through used list to meet the end place
 		while(used->next != 0x0){
 			used = used->next;
 		}
+		
 		// add new allocated header to the end of used list
-		rm_header * new;
+		rm_header_ptr new;
 		new = mmap(NULL, (s+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 		new->next = 0x0;
 		new->size = s;
