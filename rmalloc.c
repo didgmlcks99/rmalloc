@@ -39,6 +39,7 @@ void * rmalloc (size_t s)
 			else if(s <= tot_size){
 				rm_header_ptr free2 = &rm_free_list;
 				size_t coal_size = free2->size;
+				// minimum coalescing happens
 				while(coal_size != tot_size){
 					// increment size for coalescing
 					coal_size += free2->next->size;
@@ -49,6 +50,8 @@ void * rmalloc (size_t s)
 					// deallocate temp
 					munmap(temp2, (temp2->size + sizeof(rm_header)));
 				}
+
+				// when the coalesced space has a remaining space
 				if(s != tot_size){
 					// allocate for second part of memory after split
 					rm_header_ptr split = mmap(NULL, ((coal_size-s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -83,11 +86,15 @@ void * rmalloc (size_t s)
 		rm_header_ptr points_min_chunk;
 
 		rm_header_ptr free = &rm_free_list;
+		// walk through free list to find best fit
 		while(free->next != 0x0){
+			// total size is increment as walking
 			tot_size += free->next->size;
+			// when it meets a node that is big enough for user requeset and remaining space smaller than min
 			if((free->next->size - s) >= 0 && (free->next->size - s) < min_fit){
 				min_fit = (free->next->size - s);
 				points_min_chunk = free;
+				// when there are not remaining space at all
 				if(min_fit == 0){
 					// bring target data to temporary
 					rm_header_ptr temp = free->next;
@@ -99,6 +106,7 @@ void * rmalloc (size_t s)
 					while(used->next != 0x0){
 						used = used->next;
 					}
+					
 					// add target address at the end of used list
 					temp->next = 0x0;
 					used->next = temp;
@@ -107,7 +115,8 @@ void * rmalloc (size_t s)
 			}
 			free = free->next;
 		}
-		printf("%lu : %lu\n", min_fit, tot_size);
+		
+		//when there has been found a best fit memory
 		if(min_fit != 1000000){
 			// bring target node to temp
 			rm_header_ptr temp = points_min_chunk->next;
@@ -121,10 +130,13 @@ void * rmalloc (size_t s)
 			split->next = points_min_chunk->next;
 			split->size = min_fit;
 			points_min_chunk->next = split;
-		}else if(s <= tot_size){
+		}
+		// when best fit was not found coalescing happens
+		else if(s <= tot_size){
 			rm_header_ptr free2 = &rm_free_list;
 			size_t coal_size = free2->size;
-			while(coal_size != tot_size){
+			// minimum coalescing happens
+			while(coal_size <= s){
 				// increment size for coalescing
 				coal_size += free2->next->size;
 				// bring first node to temp
@@ -135,6 +147,7 @@ void * rmalloc (size_t s)
 				munmap(temp2, (temp2->size + sizeof(rm_header)));
 			}
 			
+			// when the coalesced space has a remaining space
 			if(s != tot_size){
 				// allocate for second part of memory after split
 				rm_header_ptr split = mmap(NULL, ((coal_size-s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
