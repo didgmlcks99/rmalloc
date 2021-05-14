@@ -41,7 +41,7 @@ void * rmalloc (size_t s)
 				rm_header_ptr free2 = &rm_free_list;
 				size_t coal_size = free2->size;
 				// minimum coalescing happens
-				while(coal_size != tot_size){
+				while(coal_size < s){
 					// increment size for coalescing
 					coal_size += free2->next->size;
 					// bring first node to temp
@@ -53,7 +53,7 @@ void * rmalloc (size_t s)
 				}
 
 				// when the coalesced space has a remaining space
-				if(s != tot_size){
+				if(s != coal_size){
 					// allocate for second part of memory after split and connect it back to the free list
 					rm_header_ptr split = mmap(NULL, ((coal_size-s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 					split->next = free2->next;
@@ -150,7 +150,7 @@ void * rmalloc (size_t s)
 			}
 			
 			// when the coalesced space has a remaining space
-			if(s != tot_size){
+			if(s != coal_size){
 				// allocate for second part of memory after split and connect back to the free list
 				rm_header_ptr split = mmap(NULL, ((coal_size-s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
 				split->next = free2->next;
@@ -280,12 +280,91 @@ void rfree (void * p)
 
 void * rrealloc (void * p, size_t s) 
 {
-	// TODO
-	return 0x0 ; // erase this 
+	rm_header_ptr used = &rm_used_list;
+	while(used->next != 0x0){
+		if(used->next == (void *)(p - sizeof(rm_header))){
+			
+			// when current memory size is equal to user request size
+			if(used->next->size == s){
+				printf("[NOTICE] Memory already at requested size.\n");
+				return 0x0;
+			}
+			
+			// when current memory size is less than user request size
+			if(used->next->size < s){
+				// bring target data to temporary
+				rm_header_ptr temp = used->next;
+				// connect used list to the next node after target node
+				used->next = used->next->next;
+
+				rm_header_ptr free = &rm_free_list;
+				// walks through free list to meet the end place
+				while(free->next != 0x0){
+					free = free->next;
+				}
+
+				// connect target memory space to the end of free list
+				temp->next = 0x0;
+				free->next = temp;
+
+				rm_header_ptr free2 = &rm_free_list;
+				size_t more_size = free2->size;
+				// minimum coalescing happens
+				while(more_size < s){
+					// increment size for coalescing
+					more_size += free2->next->size;
+					// bring first node to temp
+					rm_header_ptr temp2 = free2->next;
+					// connect current node to the node after target node
+					free2->next = free2->next->next;
+					// deallocate temp
+					munmap(temp2, (temp2->size + sizeof(rm_header)));
+				}
+				
+				// when the coalesced space has a remaining space
+				if(s != more_size){
+					// allocate for second part of memory after split and connect back to the free list
+					rm_header_ptr split = mmap(NULL, ((more_size - s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+					split->next = free2->next;
+					split->size = more_size - s;
+					free2->next = split;
+				}
+			}
+			// when current memory size is greater the user request size
+			else if(used->next->size > s){
+				// remaining memory after decreasing memory size is sent to the end of free list
+				rm_header_ptr remain = mmap(NULL, ((used->next->size - s) + sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+
+				rm_header_ptr free = &rm_free_list;
+				while(free->next != 0x0){
+					free = free->next;
+				}
+
+				remain->size = (used->next->size - s);
+				remain->next = 0x0;
+				free->next = remain;
+
+				// the current memory will be decreased to user request size
+				rm_header_ptr temp = used->next;
+				used->next = used->next->next;
+				munmap(temp, (temp->size + sizeof(rm_header)));
+			}
+
+			// maintain the new sized memory in its original spot in used list
+			rm_header_ptr new;
+			new = mmap(NULL, (s+sizeof(rm_header)), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+			new->size = s;
+			new->next = used->next;
+			used->next = new;
+			return (void *)new + sizeof(rm_header);
+		}
+	}
+	printf("[ERROR] Segmentation Fault > accessing inaccessible memory.\n");
 }
 
 void rmshrink () 
 {
+	//walk through free list and return memory to OS
 	rm_header_ptr free = &rm_free_list;
 	while(free->next != 0x0){
 		rm_header_ptr temp = free->next;
