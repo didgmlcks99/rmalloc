@@ -6,6 +6,7 @@
 rm_header rm_free_list = { 0x0, 0 } ;
 rm_header rm_used_list = { 0x0, 0 } ;
 
+// initiats policy to default First Fit policy
 rm_option policy = FirstFit;
 
 void * rmalloc (size_t s) 
@@ -270,10 +271,11 @@ void rfree (void * p)
 			// connect target memory space to the end of free list
 			temp->next = 0x0;
 			free->next = temp;
-			break;
+			return ;
 		}
 		used = used->next;
 	}
+	printf("[ERROR] Segmentation Fault > accessing inaccessible memory.\n");
 }
 
 void * rrealloc (void * p, size_t s) 
@@ -284,7 +286,12 @@ void * rrealloc (void * p, size_t s)
 
 void rmshrink () 
 {
-	// TODO
+	rm_header_ptr free = &rm_free_list;
+	while(free->next != 0x0){
+		rm_header_ptr temp = free->next;
+		free->next = free->next->next;
+		munmap(temp, (temp->size + sizeof(rm_header)));
+	}
 }
 
 void rmconfig (rm_option opt) 
