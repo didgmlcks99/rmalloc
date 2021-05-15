@@ -287,7 +287,7 @@ void * rrealloc (void * p, size_t s)
 			// when current memory size is equal to user request size
 			if(used->next->size == s){
 				printf("[NOTICE] Memory already at requested size.\n");
-				return 0x0;
+				return (void *)used->next + sizeof(rm_header);
 			}
 			
 			// when current memory size is less than user request size
